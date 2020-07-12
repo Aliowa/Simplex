@@ -1,6 +1,7 @@
 #include <DallasTemperature.h>
 #include <OneWire.h>
 #include "UpdateLCD.h"
+#include "ControlMode.h"
 
 #define ONE_WIRE_BUS 14
 #define MENU_UP 1
@@ -30,19 +31,15 @@ void loop() {
   
 }
 
-void getValues() {
+void up() {
 
 }
 
-void menuUp() {
+void down() {
 
 }
 
-void menuDown() {
-
-}
-
-void menuEnter() {
+void enter() {
 
 }
 
@@ -69,9 +66,9 @@ void initButtonsLeds() {
 }
 
 void attachInterrupts() {
-  attachInterrupt(MENU_UP, menuUp, FALLING);
-  attachInterrupt(MENU_DOWN, menuDown, FALLING);
-  attachInterrupt(MENU_ENTER, menuEnter, FALLING);
+  attachInterrupt(MENU_UP, up, FALLING);
+  attachInterrupt(MENU_DOWN, down, FALLING);
+  attachInterrupt(MENU_ENTER, enter, FALLING);
 }
 
 void detachInterrupts() {

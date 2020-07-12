@@ -8,10 +8,6 @@ typedef enum {
   SETUPPAGE
 } page;
 
-typedef enum {
-  MAXTEMP,
-  
-} control_type;
 
 class UpdateLCD {
   public:
