@@ -1,7 +1,7 @@
 #include <DallasTemperature.h>
 #include <OneWire.h>
-#include "UpdateLCD.h"
 #include "ControlMode.h"
+#include "UpdateLCD.h"
 
 #define ONE_WIRE_BUS 14
 #define MENU_UP 1
@@ -16,6 +16,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 DeviceAddress insideThermometer, outsideThermometer;
 UpdateLCD myLcd;
+ControlMode myControl;
 
 void setup() {
   Serial.begin(9600);
@@ -25,14 +26,24 @@ void setup() {
 #endif
   initButtonsLeds();
   attachInterrupts();
+
+  /*
+   * read EEPROM to get prev saved parameters
+   */
 }
 
 void loop() {
-  
+  //read data, analyze data according to control mode, if not call funt to update 3Dvent
+  getSensorData();
+  comapreData();
 }
 
 void up() {
-
+  /*if on main page, update current control parameter (seter for max T for example)
+   * if on Setup page and chang contrl active(press M again after enetering setup) switch thru modes
+   * 
+   */
+  
 }
 
 void down() {
@@ -40,19 +51,38 @@ void down() {
 }
 
 void enter() {
+  if (myLcd.getCurrentPage() == HOMEPAGE)
+    myLcd.printPage(SETUPPAGE);
+  else
+  {
+    ;
+  }
+}
+
+void getSensorData() {
 
 }
 
-void getSensorData(){
-  
+void comapreData() {
+
 }
 
-void analyseData(){
-  
-}
-
-void updateTemperature(){
-  
+void update3DVent(control_type type) {
+  switch (type) {
+    case MAXTEMP: myControl.cntrlByMaxTemp();
+      break;
+    case GRAPH: myControl.cntrlByGraph();
+      break;
+    case LH: myControl.cntrlByLh();
+      break;
+    case NURK: myControl.cntrlByNurk();
+      break;
+    case KOEF: myControl.cntrlByKoef();
+      break;
+    case HOUR: myControl.cntrlByHour();
+      break;
+    default: return;
+  }
 }
 
 void initButtonsLeds() {
