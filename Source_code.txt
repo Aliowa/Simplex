@@ -1,0 +1,682 @@
+#include <OneWire.h>
+#include <Wire.h>
+#include <DallasTemperature.h>
+#include <EEPROM.h>
+
+LiquidCrystal_I2C lcd(0x3F, 16, 2);//scl-A5, sda-A4 SDA & SCL are pins A4 and A5 I2C
+//LiquidCrystal_I2C lcd(0x27, 16, 2);//scl-A5, sda-A4 SDA & SCL are pins A4 and A5 I2C
+
+unsigned long interval1 = 1000;//lühike ventiili keeramine
+unsigned long interval2 = 60000;//mõõtmise oote interval ja kella minut
+unsigned long interval3 = 4000;//pikk ventiili kerimine
+unsigned long interval4 = 30000;//kui nuppe ei vajutata siis peamenüüsse 0 või 4
+unsigned long interval5 = 1000;//nupu pikk vajutus
+unsigned long interval6 = 20000;//pika kerimise vaheaeg ja õue tempi ning sulgudes in vahetumine
+unsigned long interval7 = 59790;//kella minut
+unsigned long interval8 = 1500;//aeg, mille jooksul menüüs liikumise järgselt ei lubata väärtusi muuta
+
+unsigned long prev1Time = 0;//lyhike kerim
+unsigned long prev2Time = 0;//aeg
+unsigned long prev3Time = 0;//pikk kerimine
+unsigned long prev4Time = 0;//kui nupud ei liigu siis tagasi menyysse
+unsigned long prev5Time = 0;//kw ja out vaheldumine
+unsigned long prev6Time = 0;//2e nupu pikk vajutus, menüüsse
+unsigned long prev7Time = 0;//jahe tagasi kuvamine
+unsigned long prev8Time = 0;//aeg, mille jooksul menüüs liikumise järgselt ei lubata väärtusi muuta
+
+unsigned long curTime;
+int kollaState = LOW;
+int siniState = LOW;
+int kollaPin = 2;// kollane led
+const int buttonPin = 4; //kollane nupp
+const int button2Pin = 3;//sinine nupp
+int siniPin = 5; //sinine led
+int mleftPin = 6;
+int mrightPin = 7;
+int temp1Pin = 8;
+int temp2Pin = 9;
+int temp3Pin = 10;
+float temp_1;
+float temp_2;
+float temp_3;
+uint8_t sett = 21;
+float set = 1;
+int mode = 1;
+float mint = 0;
+uint8_t maxt = 50;
+int flow = 100;
+uint8_t floi = 0;
+float koef = 0.0;
+uint8_t kontr = 1;
+//uint8_t intr = 1;
+uint8_t suund = 1;
+uint8_t koei = 0;
+float sensor;
+float otemp;
+float itemp;
+int buttonState = 0;
+int button2State = 0;
+int paus = 1;//väärtuse muutmisel peatatakse temp check
+int nupp = 0; //peale muutuja väärtuse suurenemist kaitseb nupp 0 edasist väärtuse suurenemist lüliti vabastamisel
+
+byte error, i2c_address, lcd_address[2] = {0x27, 0x3F};
+int lcd_address_number;
+DallasTemperature* sensor_1;
+DallasTemperature* sensor_2;
+DallasTemperature* sensor_3;
+
+void setup(){
+   Wire.begin();
+  Serial.begin(9600);
+  for(lcd_address_number = 0; lcd_address_number < 2; lcd_address_number++){
+    Wire.beginTransmission(lcd_address[lcd_address_number]);
+    error = Wire.endTransmission();
+    if(error == 0){
+      i2c_address = lcd_address[lcd_address_number];
+   break;
+    }  
+  }
+  if (error != 0){
+  }
+  lcd = LiquidCrystal_I2C(lcd_address[lcd_address_number], 16, 2);
+ 
+  lcd.backlight();
+  lcd.begin(16, 2);
+  lcd.init();
+  delay(5);
+
+  sett = EEPROM.read(20);
+  mint = EEPROM.read(21);
+  maxt = EEPROM.read(22);
+  floi = EEPROM.read(23);
+  koei = EEPROM.read(24);
+  kontr = EEPROM.read(25);
+  suund = EEPROM.read(27);
+
+  pinMode(buttonPin, INPUT);
+  pinMode(button2Pin, INPUT);
+  OneWire ds_1(temp1Pin);
+  DallasTemperature sensorTemp1(&ds_1);
+  OneWire ds_2(temp2Pin);
+  DallasTemperature sensorTemp2(&ds_2);
+  OneWire ds_3(temp3Pin);
+  DallasTemperature sensorTemp3(&ds_3);
+  sensor_1 = &sensorTemp1;
+  sensor_2 = &sensorTemp2;
+  sensor_3 = &sensorTemp3;
+
+  pinMode(kollaPin, OUTPUT);
+  pinMode(siniPin, OUTPUT);
+  pinMode(mleftPin, OUTPUT);
+  pinMode(mrightPin, OUTPUT);
+  digitalWrite(kollaPin, LOW);
+  digitalWrite(siniPin, LOW);  
+  lcd.setCursor(0, 0);
+  lcd.print("Simplex 36    ");
+   delay(500);
+  lcd.setCursor(0, 0);
+  lcd.print("                ");
+    digitalWrite(kollaPin, HIGH);
+  digitalWrite(siniPin, HIGH);
+}
+
+void temp_check() {
+  sensor_1->requestTemperatures();
+  sensor_2->requestTemperatures();
+  sensor_3->requestTemperatures();
+  temp_1 = sensor_1->getTempCByIndex(0);
+  temp_2 = sensor_2->getTempCByIndex(0);
+  temp_3 = sensor_3->getTempCByIndex(0);
+}
+void kollaLOW(){
+ digitalWrite(mleftPin, LOW);
+ digitalWrite(kollaPin, HIGH);
+}
+void kollaHIGH(){
+ digitalWrite(kollaPin, LOW);
+ digitalWrite(mrightPin, LOW);
+ digitalWrite(mleftPin, HIGH);
+}
+void siniLOW(){
+  digitalWrite(mrightPin, LOW);
+ digitalWrite(siniPin, HIGH);
+}
+void siniHIGH(){
+ digitalWrite(siniPin, LOW);
+  digitalWrite(mleftPin, LOW);
+ digitalWrite(mrightPin, HIGH);
+}
+void loop()  {
+ 
+  unsigned long curTime = millis();
+ if(paus == 1){
+  temp_check();
+ }
+  if(temp_3>-127 && temp_3 < 84){
+  otemp=temp_3;}
+   if(temp_1>-127 && temp_1 < 84){
+  itemp=temp_1;
+}
+// Serial.print(otemp);
+ //Serial.print("    ");
+ //Serial.println(temp_3);
+  //Serial.print(itemp);
+ //Serial.print("    ");
+ //Serial.println(temp_1);
+     
+  lcd.setCursor(0, 0);          //lcd ülemine rida
+  if (mode == 1) {
+      lcd.print("SETtmp");
+         }
+  if (mode == 2) {
+    lcd.print("0 nurk ");
+  }
+  if (mode == 3) {
+    lcd.print("MAXtmp");
+  }
+  if (mode == 4) {
+    lcd.print(" L/H  ");
+  }
+  if (mode == 5) {
+        lcd.print("koef ");
+    }
+    if (mode == 6 && kontr == 1) {
+    lcd.print("Pysitemp ");
+  }
+  if (mode == 6 && kontr == 2) {
+    lcd.print(" Graafik ");
+  }
+   if (mode == 7 && suund == 1) {
+    lcd.setCursor(0, 0);    
+    lcd.print("vasakule");
+   }
+    if (mode == 7 && suund == 2) {
+    lcd.setCursor(0, 0);    
+    lcd.print("paremale");
+   }
+  lcd.setCursor(6, 0);
+  if (mode == 1) {
+        lcd.print(sett);
+    lcd.setCursor(8, 0);
+    lcd.print((char)223);
+  }
+  if (mode == 2) {
+      if(mint >= 0){
+  lcd.setCursor(7, 0);
+      }
+       if(mint < 0){
+  lcd.setCursor(6, 0);
+      }
+    lcd.print(mint);
+    lcd.setCursor(8, 0);
+    lcd.print(" ");
+  }
+  if (mode == 3) {
+    lcd.print(maxt);
+  }
+ 
+  if (mode == 4 && floi * 10 + flow < 1000) {
+     lcd.setCursor(5, 0);
+    lcd.print(floi * 10 + flow);
+  }
+   else if(mode == 4 && floi * 10 + flow >= 1000) {
+     lcd.setCursor(4, 0);
+      lcd.print(floi * 10 + flow);
+  }
+  if (mode == 5 && koei < 90) {
+     lcd.setCursor(5, 0);
+      lcd.print((float)koei / 10 + koef, 1);
+      lcd.setCursor(8, 0);
+      lcd.print(" ");
+  }
+     else if(mode == 5 && koei >= 90) {
+     lcd.setCursor(5, 0);
+    lcd.print((float)koei / 10 + koef, 1);
+  }
+
+ 
+  lcd.setCursor(9, 0);
+  if(curTime - prev5Time < interval6) {
+  lcd.print(" ");
+  lcd.print((floi * 10 + flow) * 4.19 * (itemp - temp_2) / 3600, 2);
+  lcd.setCursor(14, 0);
+  lcd.print("KW ");
+  lcd.setCursor(0, 1);  //lcd ekraani alumine rida
+  lcd.print("in");
+  lcd.setCursor(2, 1);
+  lcd.print(itemp);
+  lcd.setCursor(6, 1);
+  lcd.print((char)223);
+  }
+  if(curTime - prev5Time > interval6 && kontr == 2) {
+    lcd.setCursor(9, 0);
+  lcd.print("out");
+  if(otemp < -9.9){
+  lcd.setCursor(11, 0);
+  }
+   if(otemp >= -9.9){
+  lcd.setCursor(12, 0);
+  }
+  lcd.print(otemp);
+  lcd.setCursor(0, 1);  //lcd ekraani alumine rida
+  lcd.print("(");
+  lcd.setCursor(1, 1);
+  lcd.print(set);
+  lcd.setCursor(5, 1);
+  lcd.print((char)223);
+   lcd.setCursor(6, 1);
+  lcd.print(")");
+  }
+ 
+  lcd.setCursor(7, 1);
+  lcd.print("ba");
+  lcd.setCursor(9, 1);
+  lcd.print(temp_2);
+  lcd.setCursor(13, 1);
+  lcd.print((char)223);
+
+  buttonState = digitalRead(buttonPin);                 // valitakse uus menüü rida, et parameetreid seadistada
+  button2State = digitalRead(button2Pin);
+
+  if((buttonState || button2State) == LOW){
+    prev6Time = curTime;
+  }
+    if (buttonState == HIGH || button2State == HIGH){
+      paus = 2;
+      prev7Time = curTime; //"JAHE" kuvamise katkestuse kell
+    }
+   
+  if (buttonState == HIGH && button2State == HIGH && (sett == 22 || koei == 72 )) {//kui koei on 62 siis koef on 7.2
+ mode ++;
+  delay(400);
+ nupp = 0;
+  }
+   if(curTime - prev4Time > interval4*0.5 ) { // kui nupud ei liigu siis peamenüüsse tagasi
+  paus = 1;
+   if(kontr == 1) {  
+       mode = 1;
+  }
+   else if(kontr == 2 ) {
+    mode = 5;
+   }
+    prev4Time = curTime;
+   }  
+  if (mode > 7) {
+    mode = 1;                                            
+  }
+ 
+  if (buttonState == HIGH && button2State == LOW && mode == 1) {
+   prev4Time = curTime;
+    nupp = 1;
+     if(curTime - prev6Time > interval5){
+      sett = sett + 5;
+       delay(200);
+        }
+         if (sett > 84) {
+          sett = 84;
+           }
+            }  
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 1 && nupp == 1){
+ sett++;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if(sett > 84) {
+    sett = 84;
+     }
+      EEPROM.write(20, sett);    
+       }  
+if (buttonState == HIGH && button2State == LOW && mode == 2) {
+ prev4Time = curTime;
+  nupp = 1;
+   }  
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 2 && nupp == 1){
+ mint++;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (mint > 1) {
+    mint = 1;
+    }
+     EEPROM.write(21, mint);    
+     }
+   
+if (buttonState == HIGH && button2State == LOW && mode == 3) {
+ prev4Time = curTime;
+  nupp = 1;
+   if(curTime - prev6Time > interval5){
+     maxt = maxt + 5;
+      delay(200);
+       }
+        if (maxt > 84) {
+         maxt = 84;
+          }
+           }  
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 3 && nupp == 1){
+ maxt++;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (maxt > 84) {
+    maxt = 84;
+     }
+      EEPROM.write(22, maxt);    
+       }
+if (buttonState == HIGH && button2State == LOW && mode == 4) {
+ prev4Time = curTime;
+  nupp = 1;
+   if(curTime - prev6Time > interval5){
+    floi = floi + 5;
+     delay(200);
+      }
+       if (floi > 140) {
+        floi = 140;
+         }
+          }  
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 4 && nupp == 1){
+ floi++;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (floi > 140) {
+    floi = 140;
+     }
+      EEPROM.write(23, floi);    
+       }
+if(buttonState == HIGH && button2State == LOW && mode == 5) {
+ prev4Time = curTime;
+  nupp = 1;
+   if(curTime - prev6Time > interval5){
+    koei = koei + 5;
+     delay(200);
+      }
+       if (koei > 110) {
+        koei = 110;
+         }
+          }  
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 5 && nupp == 1){
+ koei++;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (koei > 110) { //koef on algselt 1 ja liites 1/10 koei 100 saame koefitsendi 10
+    koei = 110;
+     }
+      EEPROM.write(24, koei);  
+       }
+if (buttonState == HIGH && button2State == LOW && mode == 6) {
+ prev4Time = curTime;
+  nupp = 1;
+   }
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 6 && nupp == 1){
+ kontr++;
+  nupp = 0;
+   if (kontr > 2) {
+    kontr = 1;
+     }  
+      EEPROM.write(25, kontr);    
+       }
+if (buttonState == HIGH && button2State == LOW && mode == 7) {
+ prev4Time = curTime;
+  nupp = 1;
+   }
+if (curTime - prev8Time > interval8 && buttonState == LOW && mode == 7 && nupp == 1){
+ suund++;
+  nupp = 0;
+   if (suund > 2) {
+    suund = 1;
+     }  
+      EEPROM.write(27, suund);    
+       }
+ 
+if (button2State == HIGH && buttonState == LOW && mode == 1) {
+ prev4Time = curTime;
+  nupp = 2;
+   if(curTime - prev6Time > interval5){
+    sett = sett - 5;
+     delay(200);
+      }
+       if (sett < 10) {
+        sett = 10;
+         }
+          }  
+if(curTime - prev8Time > interval8 && button2State == LOW && mode == 1 && nupp == 2){
+ sett--;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (sett < 10) {
+    sett = 10;
+     }
+      EEPROM.write(20, sett);    
+       }  
+if(button2State == HIGH && buttonState == LOW && mode == 2) {
+ prev4Time = curTime;
+  nupp = 2;
+   }  
+if (curTime - prev8Time > interval8 && button2State == LOW && mode == 2 && nupp == 2){
+ mint--;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (mint < -1) {
+    mint = -1;
+     }
+      EEPROM.write(21, mint);    
+       }
+if (button2State == HIGH && buttonState == LOW && mode == 3) {
+ prev4Time = curTime;
+  nupp = 2;
+   if(curTime - prev6Time > interval5){
+    maxt = maxt - 5;
+     delay(200);
+      }
+       if (maxt < 30) {
+        maxt = 30;
+         }
+          }  
+if(curTime - prev8Time > interval8 && button2State == LOW && mode == 3 && nupp == 2){
+ maxt--;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (maxt < 30) {
+    maxt = 30;
+     }
+      EEPROM.write(22, maxt);    
+       }
+if (button2State == HIGH && buttonState == LOW && mode == 4) {
+ prev4Time = curTime;
+  nupp = 2;
+   if(curTime - prev6Time > interval5){
+    floi = floi - 5;
+     delay(200);
+      }
+       if (floi < 10) {
+        floi = 10;
+         }
+          }  
+if (curTime - prev8Time > interval8 && button2State == LOW && mode == 4 && nupp == 2){
+ floi--;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (floi < 10) {
+    floi = 10;
+     }
+      EEPROM.write(23, floi);    
+       }
+if(button2State == HIGH && buttonState == LOW && mode == 5) {
+ prev4Time = curTime;
+  nupp = 2;
+   if(curTime - prev6Time > interval5){
+    koei = koei - 5;
+     delay(200);
+      }
+       if (koei < 1) {
+        koei = 1;
+         }
+          }  
+if(curTime - prev8Time > interval8 && button2State == LOW && mode == 5 && nupp == 2){
+ koei--;// väärtust suurendatakse vaid nupu vabastamisega
+  nupp = 0;
+   if (koei < 1) { //koef on algselt 1 ja liites 1/10 koei 100 saame koefitsendi 10
+    koei = 1;
+     }
+      EEPROM.write(24, koei);  
+       }
+       
+if(button2State == HIGH && buttonState == LOW && mode == 6) {
+ prev4Time = curTime;
+  nupp = 2;
+   }
+if(curTime - prev8Time > interval8 && button2State == LOW && mode == 6 && nupp == 2){
+ kontr--;
+  nupp = 0;
+   if (kontr < 1) {
+    kontr = 2;
+     }  
+      EEPROM.write(25, kontr);    
+       }
+if (button2State == HIGH && buttonState == LOW && mode == 7) {
+ prev4Time = curTime;
+  nupp = 2;
+   }
+if(curTime - prev8Time > interval8 && button2State == LOW && mode == 7 && nupp == 2){
+ suund--;
+  nupp = 0;
+   if (suund < 1) {
+    suund = 2;
+     }  
+      EEPROM.write(27, suund);    
+       }
+   
+if (suund < 2){
+ mleftPin = 7;
+  mrightPin = 6;
+}  
+if(suund > 1){
+ mleftPin = 6;
+  mrightPin = 7;
+   }    
+if(curTime - prev5Time > interval4 + interval1*4) {
+ prev5Time = curTime;
+  }
+   if (kontr == 1) {
+    sensor = itemp;
+     
+ set = sett;
+ 
+   }
+if (kontr == 2) {
+ sensor = itemp;
+  if(otemp > 0){
+     
+       set = sett+((20-otemp)/(1+(9-((float)koei/10+koef))*0.3));
+       
+         }
+  if(temp_3>-127 && temp_3 < 84){
+  otemp=temp_3;
+}
+ if(temp_1>-127 && temp_1 < 84){
+  itemp=temp_1;
+}
+if(otemp <= 0){
+
+ set=sett+(20/(1+(9-((float)koei/10+koef))*0.3))+(-otemp/(1+(9-((float)koei/10+koef+mint))*0.3));
+ 
+   }
+    }
+lcd.setCursor(14, 1); //alumise rea lõpp
+ if (itemp>maxt-2) {
+ lcd.print("MX");
+ }
+ if(set + 3 < itemp) {
+  lcd.print("CO");
+   }
+    else if (itemp - set > 0.5 && itemp - set < 3) {
+     lcd.print("co");
+      }
+if(set - itemp > 0.5 && set -itemp < 3) {
+ lcd.print("wo");
+  }
+   else if (set - itemp > 3) {
+    lcd.print("WO");
+     }
+if (abs(set - itemp) <=0.5) {
+ lcd.print("OK");
+  }
+ 
+if(curTime - prev4Time > interval4) {
+ mode = 1;
+  prev4Time = curTime;  
+   }
+   
+if(abs(set - itemp) > 3) {//pikk kerimine, absoluutne soovitud temp erinevus on üle 3 kraadi
+ if((set - itemp) < -3) { // cool down pikk
+  if(curTime - prev3Time < interval3) { //pikk
+   kollaLOW();        
+    if(itemp >= 10) { //kui on kõrgem siis lubatakse
+     siniHIGH();
+      }
+       if(itemp < 10) { //ei lubata min tempst allapoole minna
+        siniLOW();
+         }
+          }
+           }
+if(curTime - prev3Time > interval1*0.9*(abs(set -itemp))) { // kui intervall saab täis, siis pannakse jahutamine kinni
+ siniLOW();
+  }
+if(curTime - prev3Time > interval6) {  // interval 2 on 1 min ja kiirkerimisel +-3 kraadi keritakse uuesti 20 sek möödudes
+ prev3Time = curTime;
+  }
+// warm upp pikk
+if((set - itemp) > 3){
+ if(curTime - prev3Time < interval3) {
+  siniLOW();
+   if(itemp <= maxt-2){ //kui on madalam siis lubatakse tõsta
+    kollaHIGH();
+     }
+      if(itemp > maxt-2){//ei lubata max tempst ülespoole minna
+       kollaLOW();
+        }
+         }
+          }
+if(curTime - prev3Time > interval1*0.9*(abs(set -itemp))){
+ kollaLOW();
+  }
+   if(curTime - prev3Time > interval6){  // interval 2 on 1 min ja kiirkerimisel +-3 kraadi keritakse uuesti 20 sek möödudes
+    prev3Time = curTime;        
+     }
+      }// pika kerimise lopppp
+     
+if(((set - itemp) >= -3) && ((set - itemp) <= 3)) {//lyhike keeramine
+ if((set + 0.5) < itemp) { // cool down lühike
+  if(curTime - prev1Time < interval1*0.9){ //(*set-itemp)) { // 800 ms kontroll
+   kollaLOW();
+    if(itemp >= 10) { //kui on kõrgem lubatakse langetada
+     siniHIGH();
+      }
+       if(itemp < 10) { //ei lubata min tempst allapoole minna
+        siniLOW();
+         }
+          }// 800 ms kontroll
+           if(curTime - prev1Time > interval1) { // jahutamise keeramise ja indikatsiooni lõpp
+            siniLOW();
+             }
+              }// cool down lühike
+if(curTime - prev1Time > interval2) {
+ prev1Time = curTime;  
+  }
+if((set - 0.5) > itemp)  { //warm upp lühik
+ if(curTime - prev1Time < interval1*0.9*(set-itemp)) {
+  siniLOW();
+   if (itemp <= maxt-2) { //ei lubata max tempst ülespoole minna
+    kollaHIGH();
+     }      
+      if(itemp > maxt-2) { //ei lubata max tempst ülespoolepoole minna ja sulgetakse kraani
+       kollaLOW();
+                  }
+            }
+             if(curTime - prev1Time >= interval1) {
+              kollaLOW();
+               }
+                }//warm upp lühike              
+if(curTime - prev1Time > interval2) {
+ prev1Time = curTime;  
+  }
+   }//lyhike keeramine
+   if(itemp > maxt) { //ei lubata max tempst ülespoole minna ja sulgetakse ventiil
+    kollaLOW();
+   
+     siniHIGH();
+      delay(5000);
+       siniLOW();
+        }
+  if(((set - itemp) >= -0.5) && ((set - itemp) <= 0.5)) {    
+ kollaLOW();
+  siniLOW();
+   }
+    }
