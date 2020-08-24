@@ -31,7 +31,7 @@ control_type ControlMode::getControlType() {
   always check koef set by user
 */
 
-void ControlMode::cntrlByMaxTemp() {
+void ControlMode::cntrlBySetTemp() {
   /*
     not higher then max set te temperature.
     float koef, look at reference in fb chat
@@ -47,17 +47,25 @@ void ControlMode::cntrlByGraph() {
 }
 
 void ControlMode::cntrlByLh() {
-
+/*
+Remove that control, is required to calculate kW. Liters per hours
+*/
 }
 
 void ControlMode::cntrlByNurk() {
-
+/*
+Info. not a control mode. remove that for now
+*/
 }
 
 void ControlMode::cntrlByKoef() {
-
+/*
+remove that. Graph is calculateed by koef
+*/
 }
 
 void ControlMode::cntrlByHour() {
+/*
 
+*/
 }
