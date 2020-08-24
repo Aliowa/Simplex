@@ -26,12 +26,24 @@ control_type ControlMode::getControlType() {
   return type;
 }
 
-void ControlMode::cntrlByMaxTemp() {
+/*
+  2 cntrls fixd temp and by graph
+  always check koef set by user
+*/
 
+void ControlMode::cntrlByMaxTemp() {
+  /*
+    not higher then max set te temperature.
+    float koef, look at reference in fb chat
+    open valve and wait, 2 degrees lower then max.
+  */
 }
 
 void ControlMode::cntrlByGraph() {
-
+/*
+  graph is const array
+  do array for temp and compare
+*/
 }
 
 void ControlMode::cntrlByLh() {
