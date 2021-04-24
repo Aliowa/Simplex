@@ -3,20 +3,22 @@
 
 #define ROWS 2
 #define COLUMNS 16
-#define ADDRESS 0x27
+#define ADDRESS 0x20
+#define I2C_SDA 23
+#define I2C_SCL 22
 
 
-LiquidCrystal_I2C lcd(ADDRESS, COLUMNS, ROWS); // set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C lcd(ADDRESS, COLUMNS, ROWS); // set the LCD address to 0x20 for a 16 chars and 2 line display
 
 void initLcd() {
-  lcd.init();
+  Wire.begin(I2C_SDA, I2C_SCL);
   lcd.init();
   lcd.backlight();
 }
 
 template <typename T>
-void print(uint8_t columns, uint8_t rows, T value) {
-  lcd.setCursor(columns, rows);
+void print(uint8_t column, uint8_t row, T value) {
+  lcd.setCursor(column, row);
   lcd.print(value);
 }
 

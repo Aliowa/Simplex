@@ -12,6 +12,7 @@ class ControlMode {
     void cntrlByNurk(void);
     void cntrlByKoef(void);
     void cntrlByHour(void);
+    void cntrlBySetTemp(void);
 
   private:
     control_type type;

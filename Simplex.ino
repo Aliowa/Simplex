@@ -3,6 +3,13 @@
 #include "ControlMode.h"
 #include <Wire.h>
 #include <DallasTemperature.h>
+
+#define UP 16
+#define DOWN 18
+#define MENU 5
+#define BUTTON_DEBOUNCE_DELAY   150
+
+
 #define DEBUG
 
 // Data wire is plugged into port 2 on the Arduino
@@ -12,6 +19,7 @@
 OneWire oneWire(ONE_WIRE_BUS);
 // Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
+
 #ifdef DEBUG
 #include "Debug.h"
 #endif
@@ -28,6 +36,10 @@ void setup()
   initLcd();
   printHomePage();
   getInitialData();
+
+  pinMode(UP, INPUT);
+  pinMode(DOWN, INPUT);
+  pinMode(MENU, INPUT);
 }
 
 
@@ -46,7 +58,7 @@ void upButton() {
   */
 }
 
-void enterButton() {
+void menuButton() {
   /*
      enter setup mode
      enter change control mode
@@ -79,18 +91,6 @@ void compareData(int * setTemp, int * sensorData) {
 void update3DVent() {
   /*
      open/close valve
-  */
-}
-
-void attachInterrupts() {
-  /*
-     attach button interrupts
-  */
-}
-
-void detachInterrupts() {
-  /*
-     detach button interrupts
   */
 }
 
