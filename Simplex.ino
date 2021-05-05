@@ -48,6 +48,11 @@ void loop() {
      read sensors
      compare data
   */
+  for(int i = 1; i < 99; i++){
+    Serial.println(i);
+    print(13,1,i);
+    delay(1000);
+  }
 }
 
 void upButton() {
