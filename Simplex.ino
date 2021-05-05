@@ -10,15 +10,22 @@
 #define BUTTON_DEBOUNCE_DELAY   150
 
 
-#define DEBUG
+#define DEBUG1
 
 // Data wire is plugged into port 2 on the Arduino
-#define ONE_WIRE_BUS 2
+#define SENSOR_0 25
+#define SENSOR_1 32
+#define SENSOR_2 33
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-OneWire oneWire(ONE_WIRE_BUS);
+OneWire sensor_0(SENSOR_0);
+OneWire sensor_1(SENSOR_1);
+OneWire sensor_2(SENSOR_2);
+
 // Pass our oneWire reference to Dallas Temperature.
-DallasTemperature sensors(&oneWire);
+DallasTemperature sens0(&sensor_0);
+DallasTemperature sens1(&sensor_1);
+DallasTemperature sens2(&sensor_2);
 
 #ifdef DEBUG
 #include "Debug.h"
@@ -29,10 +36,7 @@ DeviceAddress inputSensor, outputSensor, outsideSensor;
 void setup()
 {
   Serial.begin(9600);
-  sensors.begin();
-#ifdef DEBUG
-  debugSensors();
-#endif
+  sens0.begin();
   initLcd();
   printHomePage();
   getInitialData();
@@ -40,6 +44,8 @@ void setup()
   pinMode(UP, INPUT);
   pinMode(DOWN, INPUT);
   pinMode(MENU, INPUT);
+
+
 }
 
 
@@ -48,11 +54,12 @@ void loop() {
      read sensors
      compare data
   */
-  for(int i = 1; i < 99; i++){
-    Serial.println(i);
-    print(13,1,i);
-    delay(1000);
-  }
+  sens0.requestTemperatures();
+  float tempC = sens0.getTempCByIndex(0);
+  if (tempC != DEVICE_DISCONNECTED_C)
+    print(12, 1, tempC);
+  else
+    Serial.println("Error: Could not read temperature data");
 }
 
 void upButton() {
@@ -80,10 +87,7 @@ void downButton() {
 }
 
 void readSensors() {
-  /*
-     read sensors data,
-     send reference to compare data
-  */
+
 }
 
 void compareData(int * setTemp, int * sensorData) {

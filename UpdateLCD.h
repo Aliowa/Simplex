@@ -24,7 +24,7 @@ void print(uint8_t column, uint8_t row, T value) {
 
 void printHomePage() {
   const String homePageStrings[] = {"Mode:", "kW", "Set t:", "t:"};
-  const uint8_t cursorColumnPos[] = {0, 14, 0, 11};
+  const uint8_t cursorColumnPos[] = {0, 14, 0, 10};
   const uint8_t cursorRowPos[] = {0, 0, 1, 1};
   for (int i = 0; i < 4; i++)
     print(cursorColumnPos[i], cursorRowPos[i], homePageStrings[i]);
