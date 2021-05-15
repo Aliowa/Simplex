@@ -24,6 +24,7 @@
 #define LED_B_2 21
 
 #define POT_PIN 26
+
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire sensor_0(SENSOR_0);
 OneWire sensor_1(SENSOR_1);
@@ -37,8 +38,12 @@ DallasTemperature sens2(&sensor_2);
 DallasTemperature* sensors[3];
 float temp[3];
 
+uint64_t readSensTime;
+uint16_t readInterval = 10000; //read sensors with 10s interval
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+      
   initLcd();
   printHomePage();
   getInitialData();
@@ -59,24 +64,24 @@ void setup() {
   pinMode(LED_B_1, OUTPUT);
   pinMode(LED_B_2, OUTPUT);
 
+  currentPage = HOME;
 
   for (int i = 0; i < 3; i++)
     sensors[i]->begin();
+
+  readSensors();
+  readSensTime = millis();
+  print(12,1, temp[0]);
 }
 
-
 void loop() {
-  readSensors();
-  Serial.println("Sens 0: " + String(temp[0]) + " Sens 1: " + String(temp[1]) + " Sens 2: " + String(temp[2]));
-  delay(1000);
-  Serial.println("Pot position: " + String(analogRead(POT_PIN)));
-  digitalWrite(MOTOR_PIN_1, HIGH);
-  digitalWrite(MOTOR_PIN_2, LOW);
-  digitalWrite(MOTOR_PIN_3, HIGH);
-  digitalWrite(MOTOR_PIN_4, LOW);
-  Serial.println("UP PIN STATE" + String(digitalRead(UP)));
-  //Serial.println("Motor pin 1: " + String(digitalRead(MOTOR_PIN_1)) + " Motor pin 2: " + String(digitalRead(MOTOR_PIN_2)) + " Motor pin 3: " + String(digitalRead(MOTOR_PIN_3)) + " Motor pin 4: " + String(digitalRead(MOTOR_PIN_4)));
-  delay(2000);
+  if(millis() - readSensTime > readInterval && currentPage == HOME){
+    readSensors();
+    readSensTime = millis();
+    print(12,1, temp[0]);
+  }
+  if (digitalRead(MENU) == HIGH)
+    menuButton();
 }
 
 void upButton() {
@@ -88,11 +93,20 @@ void upButton() {
 }
 
 void menuButton() {
-  /*
-     enter setup mode
-     enter change control mode
-     hold to save, blink
-  */
+  switch (currentPage) {
+    case HOME:
+      currentPage = SETUP;
+      printSetupPage();
+      break;
+    case SETUP:
+      currentPage = HOME;
+      printHomePage();
+      readSensors();
+      print(12,1, temp[0]);
+      break;
+    default: return;
+  }
+  delay(200); //kinda debounce
 }
 
 void downButton() {

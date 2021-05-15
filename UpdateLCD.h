@@ -23,6 +23,7 @@ void print(uint8_t column, uint8_t row, T value) {
 }
 
 void printHomePage() {
+  lcd.clear();
   const String homePageStrings[] = {"Mode:", "kW", "Set t:", "t:"};
   const uint8_t cursorColumnPos[] = {0, 14, 0, 10};
   const uint8_t cursorRowPos[] = {0, 0, 1, 1};
@@ -31,6 +32,7 @@ void printHomePage() {
 }
 
 void printSetupPage() {
+  lcd.clear();
   const String chngCntrlMode = "Change mode.";
   print(0, 0, chngCntrlMode);
 }
