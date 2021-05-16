@@ -42,6 +42,7 @@ uint64_t readSensTime;
 uint16_t readInterval = 10000; //read sensors with 10s interval
 int currentSetupPage;
 
+
 void setup() {
   Serial.begin(115200);
 
@@ -78,17 +79,33 @@ void setup() {
 }
 
 void loop() {
+  //read sensors if @ HOME page with 10s interavl
   if (millis() - readSensTime > readInterval && currentPage == HOME) {
     readSensors();
     readSensTime = millis();
     print(12, 1, temp[0]);
   }
+
+  //read + button
   if (digitalRead(UP) == HIGH)
     upButton();
+
+  //read M button
   if (digitalRead(MENU) == HIGH)
     menuButton();
+
+  //read - button
   if (digitalRead(DOWN) == HIGH)
     downButton();
+
+  //Exit SETUP page if inactive for 10s
+  if (millis() - lastSetupAction > 10000 && setupEnd == false) {
+    currentPage = HOME;
+    printHomePage();
+    readSensors();
+    print(12, 1, temp[0]);
+    setupEnd = true;
+  }
 }
 
 void upButton() {
