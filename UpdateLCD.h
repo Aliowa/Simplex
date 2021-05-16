@@ -7,6 +7,7 @@
 #define I2C_SDA 23
 #define I2C_SCL 22
 
+uint8_t contrast;
 
 LiquidCrystal_I2C lcd(ADDRESS, COLUMNS, ROWS); // set the LCD address to 0x20 for a 16 chars and 2 line display
 
@@ -31,8 +32,13 @@ void printHomePage() {
     print(cursorColumnPos[i], cursorRowPos[i], homePageStrings[i]);
 }
 
-void printSetupPage() {
+void printSetupPage(int* stpPage) {
   lcd.clear();
-  const String chngCntrlMode = "Change mode.";
-  print(0, 0, chngCntrlMode);
+  const String setupPage[3] = {"Change mode:", "LCD Contrast:" , "Firmware:"};
+  print(0,0, setupPage[*stpPage]);
+  delay(200); // kinda debounce
+}
+
+void printSetupPageExtra(){
+  
 }

@@ -5,7 +5,7 @@
 #include <DallasTemperature.h>
 
 #define UP 16
-#define DOWN 18
+#define DOWN 19
 #define MENU 5
 
 // Data wire is plugged into port 2 on the Arduino
@@ -40,10 +40,11 @@ float temp[3];
 
 uint64_t readSensTime;
 uint16_t readInterval = 10000; //read sensors with 10s interval
+int currentSetupPage;
 
 void setup() {
   Serial.begin(115200);
-      
+
   initLcd();
   printHomePage();
   getInitialData();
@@ -71,38 +72,50 @@ void setup() {
 
   readSensors();
   readSensTime = millis();
-  print(12,1, temp[0]);
+  print(12, 1, temp[0]);
+
+  currentSetupPage = 0;
 }
 
 void loop() {
-  if(millis() - readSensTime > readInterval && currentPage == HOME){
+  if (millis() - readSensTime > readInterval && currentPage == HOME) {
     readSensors();
     readSensTime = millis();
-    print(12,1, temp[0]);
+    print(12, 1, temp[0]);
   }
+  if (digitalRead(UP) == HIGH)
+    upButton();
   if (digitalRead(MENU) == HIGH)
     menuButton();
+  if (digitalRead(DOWN) == HIGH)
+    downButton();
 }
 
 void upButton() {
-  /*
-     trigered on interupt
-     if on main page, update desired temp value
-     if on setup page and change mode is active, scroll thru control mode
-  */
+  switch (currentPage) {
+    case HOME:
+      break;
+    case SETUP:
+      currentSetupPage++;
+      if (currentSetupPage > 2)
+        currentSetupPage = 0;
+      printSetupPage(&currentSetupPage);
+      break;
+    default: return;
+  }
 }
 
 void menuButton() {
   switch (currentPage) {
     case HOME:
       currentPage = SETUP;
-      printSetupPage();
+      printSetupPage(&currentSetupPage);
       break;
     case SETUP:
       currentPage = HOME;
       printHomePage();
       readSensors();
-      print(12,1, temp[0]);
+      print(12, 1, temp[0]);
       break;
     default: return;
   }
@@ -110,11 +123,16 @@ void menuButton() {
 }
 
 void downButton() {
-  /*
-     trigered on interupt
-     if on main page, update desired temp value
-     if on setup page and change mode is active, scroll thru control mode
-  */
+  switch (currentPage) {
+    case HOME: break;
+    case SETUP:
+      currentSetupPage--;
+      if (currentSetupPage < 0)
+        currentSetupPage = 2;
+      printSetupPage(&currentSetupPage);
+      break;
+    default: return;
+  }
 }
 
 void readSensors() {
