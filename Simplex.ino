@@ -129,10 +129,12 @@ void menuButton() {
       printSetupPage(&currentSetupPage);
       break;
     case SETUP:
-      currentPage = HOME;
+      currentPage = SETUP_EXTRA;
       printHomePage();
       readSensors();
       print(12, 1, temp[0]);
+      break;
+    case SETUP_EXTRA:
       break;
     default: return;
   }

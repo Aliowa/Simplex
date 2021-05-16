@@ -9,7 +9,8 @@ typedef enum {
 
 typedef enum {
   HOME,
-  SETUP
+  SETUP,
+  SETUP_EXTRA
 } page;
 
 page currentPage;
