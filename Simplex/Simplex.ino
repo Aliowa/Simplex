@@ -1,5 +1,5 @@
-/*!NB! Not needed for now !NB! 
- * Set pot to around 2047 using following:
+/*
+   Set pot to around 2047 using following:
   void setup() {
     Serial.begin(115200);
   }
@@ -7,9 +7,9 @@
     Serial.println("Pot value: "+ String(analogRead(26)));
     delay(100);
   }
-  
- Then programm unit once and comment out #define FORCE_ZERO_POINT*
- */
+
+  Then programm unit once and comment out #define FORCE_ZERO_POINT*
+*/
 
 //i2c required pins
 #define I2C_SDA 23
@@ -56,7 +56,11 @@ LiquidCrystal_I2C lcd(0x20, 16, 2); // set the LCD address to 0x20 for a 16 char
 I2CEEPROM eep(0x50);
 
 //Home page static prints
-const struct {uint8_t column; uint8_t row; String data;} home_page[] = {
+const struct {
+  uint8_t column;
+  uint8_t row;
+  String data;
+} home_page[] = {
   {0, 0, "Mode:"},
   {14, 0, "kW"},
   {0, 1, "Set t:"},
@@ -64,26 +68,44 @@ const struct {uint8_t column; uint8_t row; String data;} home_page[] = {
 };
 
 //Setup page static prints
-const struct {uint8_t column; uint8_t row; String data;} setup_page[] = {
+const struct {
+  uint8_t column;
+  uint8_t row;
+  String data;
+} setup_page[] = {
   {0, 0, "Change Mode:"},
   {0, 0, "LCD Contrast:"},
   {0, 0, "Firmware:"}
 };
 
 //Home page current temp position and data
-struct {const uint8_t column = 12; const uint8_t row = 1; float t = 0;} current_temp;
+struct {
+  const uint8_t column = 12;
+  const uint8_t row = 1;
+  float t = 0;
+} current_temp;
 
 //Home page set temperature position and data
-struct {const uint8_t column = 6; const uint8_t row = 1; float t = 0;} set_temp;
+struct {
+  const uint8_t column = 6;
+  const uint8_t row = 1;
+  float t = 0;
+} set_temp;
 
 //EEPROM map: 20 - Set temerature; 21 - Potentiometer zero point value; 22 - Potentiomter zero point value set
-struct {const uint8_t addres; uint8_t data;} memmory_map[] = {
+struct {
+  const uint8_t addres;
+  uint8_t data;
+} memmory_map[] = {
   {20, 0},
   {21, 0},
   {22, 0}
 };
 
-const struct {uint8_t min; uint8_t max;} zone[] = {
+const struct {
+  uint8_t min;
+  uint8_t max;
+} zone[] = {
   {0, 63},
   {64, 127},
   {128, 191},
@@ -93,7 +115,10 @@ const struct {uint8_t min; uint8_t max;} zone[] = {
 #define FORCE_ZERO_POINT
 
 //Set temperature min ad max
-const struct {uint8_t min = 10; uint8_t max = 85;} min_max_temp;
+const struct {
+  uint8_t min = 10;
+  uint8_t max = 85;
+} min_max_temp;
 
 //Sensor reading related data
 uint64_t read_sensors_time;
@@ -105,7 +130,7 @@ uint16_t pot_zero_value;
 //Initial setup
 void setup() {
   Serial.begin(115200);
-  
+
   Wire.begin(I2C_SDA, I2C_SCL);
   lcd.init();
   lcd.backlight();
@@ -114,7 +139,7 @@ void setup() {
   sensors[1] = &sensB;
   sensors[2] = &sensC;
 
-  for(int sensor = 0; sensor < 3; sensor++)
+  for (int sensor = 0; sensor < 3; sensor++)
     sensors[sensor]->begin();
 
   pinMode(BUTTON_UP, INPUT);
@@ -130,7 +155,7 @@ void setup() {
   MOTOR_STOP
 
   //Print Home page static data
-  for(int i = 0; i < 4; i++)
+  for (int i = 0; i < 4; i++)
     lcd_print(home_page[i].column, home_page[i].row, home_page[i].data);
 
 
@@ -150,7 +175,7 @@ void setup() {
 
 void loop() {
   //Read sensors each {read_sensors_interval}
-  if(millis() - read_sensors_time > read_sensors_interval){
+  if (millis() - read_sensors_time > read_sensors_interval) {
     read_sensors();
     lcd_print(current_temp.column, current_temp.row, current_temp.t);
     read_sensors_time = millis();
@@ -158,15 +183,15 @@ void loop() {
   }
 
   //Check if UP button is pressed
-  if(digitalRead(BUTTON_UP))
+  if (digitalRead(BUTTON_UP))
     button_up();
 
   //Check if DOWN button is pressed
-  if(digitalRead(BUTTON_DOWN))
+  if (digitalRead(BUTTON_DOWN))
     button_down();
 
   //Check if MENU button is pressed
-  if(digitalRead(BUTTON_MENU))
+  if (digitalRead(BUTTON_MENU))
     button_menu();
 
 }
@@ -177,7 +202,7 @@ void lcd_print(uint8_t column, uint8_t row, T value) {
   lcd.print(value);
 }
 
-void read_sensors(){
+void read_sensors() {
   for (int i = 0; i < 3; i++) {
     sensors[i]->requestTemperatures();
     temp[i] = sensors[i]->getTempCByIndex(0);
@@ -185,24 +210,31 @@ void read_sensors(){
   current_temp.t = temp[0];
 }
 
-void update_temp(){
+void update_temp() {
   float dif_temp = set_temp.t - current_temp.t;
   const uint16_t rotation_delay = 100;
-  if(abs(dif_temp) > 0.5){
-    if(dif_temp > 0){
-      MOTOR_CW  //rotate clockwise
-      delay(rotation_delay);
-      MOTOR_STOP
-    }else{
-      MOTOR_CCW //rotate counter clockwise
-      delay(rotation_delay);
-      MOTOR_STOP
-    }
+  if (abs(dif_temp) > 0.5) {
+    if (dif_temp > 0)
+      rotate_motor(1);  //update to 0 if roattion should be oposite
+    else
+      rotate_motor(0);  //update to 1 if roattion should be oposite
+  }
+}
+
+void rotate_motor(int direction) {
+  if (direction) {
+    MOTOR_CW  //rotate clockwise
+    delay(rotation_delay);
+    MOTOR_STOP
+  } else {
+    MOTOR_CCW //rotate counter clockwise
+    delay(rotation_delay);
+    MOTOR_STOP
   }
 }
 
 
-void button_up(){
+void button_up() {
   memmory_map[0].data++;
   memmory_map[0].data = constrain(memmory_map[0].data, min_max_temp.min, min_max_temp.max);
   eep.write(memmory_map[0].addres, memmory_map[0].data);
@@ -210,7 +242,7 @@ void button_up(){
   delay(200); //Kind of debounce
 }
 
-void button_down(){
+void button_down() {
   memmory_map[0].data--;
   memmory_map[0].data = constrain(memmory_map[0].data, min_max_temp.min, min_max_temp.max);
   eep.write(memmory_map[0].addres, memmory_map[0].data);
@@ -219,6 +251,6 @@ void button_down(){
 }
 
 
-void button_menu(){
-  
+void button_menu() {
+
 }
