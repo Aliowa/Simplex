@@ -5,7 +5,9 @@
 #define BUTTON_PIN_2 19
 #define BLUE_LED 18
 
-#define DEBUG_E
+#define POT_PIN 26
+
+#define DEBUG_EEPROM
 
 #include <I2CEEPROM.h>
 #include <OneWire.h>
@@ -43,6 +45,9 @@ uint8_t kollaState = LOW;
 uint8_t siniState = LOW;
 
 const uint8_t temp1Pin = 25;
+
+uint16_t potZeroPoint;
+const uint8_t zeroPointAddr = 19;
 
 float temp_1;
 float temp_2;
@@ -86,9 +91,6 @@ void setup() {
   lcd.init();
   delay(5);
 
-#ifdef DEBUG_EEPROM
-  EEPROM.write(20, byte(10));
-#endif
   
   sett = EEPROM.read(20);
   mint = EEPROM.read(21);
