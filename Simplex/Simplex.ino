@@ -1,3 +1,16 @@
+/*!NB! Not needed for now !NB! 
+ * Set pot to around 2047 using following:
+  void setup() {
+    Serial.begin(115200);
+  }
+  void loop() {
+    Serial.println("Pot value: "+ String(analogRead(26)));
+    delay(100);
+  }
+  
+ Then programm unit once and comment out #define FORCE_ZERO_POINT*
+ */
+
 //i2c required pins
 #define I2C_SDA 23
 #define I2C_SCL 22
@@ -63,10 +76,21 @@ struct {const uint8_t column = 12; const uint8_t row = 1; float t = 0;} current_
 //Home page set temperature position and data
 struct {const uint8_t column = 6; const uint8_t row = 1; float t = 0;} set_temp;
 
-//EEPROM map: 20 - Set temerature; 
+//EEPROM map: 20 - Set temerature; 21 - Potentiometer zero point value; 22 - Potentiomter zero point value set
 struct {const uint8_t addres; uint8_t data;} memmory_map[] = {
-  {20, 0}
+  {20, 0},
+  {21, 0},
+  {22, 0}
 };
+
+const struct {uint8_t min; uint8_t max;} zone[] = {
+  {0, 63},
+  {64, 127},
+  {128, 191},
+  {192, 255}
+};
+
+#define FORCE_ZERO_POINT
 
 //Set temperature min ad max
 const struct {uint8_t min = 10; uint8_t max = 85;} min_max_temp;
@@ -75,6 +99,8 @@ const struct {uint8_t min = 10; uint8_t max = 85;} min_max_temp;
 uint64_t read_sensors_time;
 const uint16_t read_sensors_interval = 10000;
 
+//Pot inital value
+uint16_t pot_zero_value;
 
 //Initial setup
 void setup() {
@@ -113,6 +139,11 @@ void setup() {
   lcd_print(current_temp.column, current_temp.row, current_temp.t);
   memmory_map[0].data = eep.read(memmory_map[0].addres);
   lcd_print(set_temp.column, set_temp.row, memmory_map[0].data);
+
+#ifdef FORCE_ZERO_POINT
+  eep.write(memmory_map[1].addres, byte(map(analogRead(POT_PIN), 0, 4095, 0, 255)));
+  eep.write(memmory_map[2].addres, 1);
+#endif
 }
 
 
@@ -123,6 +154,7 @@ void loop() {
     read_sensors();
     lcd_print(current_temp.column, current_temp.row, current_temp.t);
     read_sensors_time = millis();
+    update_temp();
   }
 
   //Check if UP button is pressed
@@ -153,23 +185,40 @@ void read_sensors(){
   current_temp.t = temp[0];
 }
 
+void update_temp(){
+  float dif_temp = set_temp.t - current_temp.t;
+  const uint16_t rotation_delay = 100;
+  if(abs(dif_temp) > 0.5){
+    if(dif_temp > 0){
+      MOTOR_CW  //rotate clockwise
+      delay(rotation_delay);
+      MOTOR_STOP
+    }else{
+      MOTOR_CCW //rotate counter clockwise
+      delay(rotation_delay);
+      MOTOR_STOP
+    }
+  }
+}
+
 
 void button_up(){
   memmory_map[0].data++;
   memmory_map[0].data = constrain(memmory_map[0].data, min_max_temp.min, min_max_temp.max);
-  lcd_print(set_temp.column, set_temp.row, memmory_map[0].data);
+  eep.write(memmory_map[0].addres, memmory_map[0].data);
+  lcd_print(set_temp.column, set_temp.row, eep.read(memmory_map[0].addres));
   delay(200); //Kind of debounce
 }
 
 void button_down(){
   memmory_map[0].data--;
   memmory_map[0].data = constrain(memmory_map[0].data, min_max_temp.min, min_max_temp.max);
-  lcd_print(set_temp.column, set_temp.row, memmory_map[0].data);
+  eep.write(memmory_map[0].addres, memmory_map[0].data);
+  lcd_print(set_temp.column, set_temp.row, eep.read(memmory_map[0].addres));
   delay(200); //Kind of debounce
 }
 
+
 void button_menu(){
-#ifdef DEBUG
-  Serial.println("MENU PRESSED.");
-#endif
+  
 }
