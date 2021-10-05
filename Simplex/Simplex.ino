@@ -212,7 +212,6 @@ void read_sensors() {
 
 void update_temp() {
   float dif_temp = set_temp.t - current_temp.t;
-  const uint16_t rotation_delay = 100;
   if (abs(dif_temp) > 0.5) {
     if (dif_temp > 0)
       rotate_motor(1);  //update to 0 if roattion should be oposite
@@ -222,6 +221,7 @@ void update_temp() {
 }
 
 void rotate_motor(int direction) {
+  const uint16_t rotation_delay = 100;
   if (direction) {
     MOTOR_CW  //rotate clockwise
     delay(rotation_delay);
