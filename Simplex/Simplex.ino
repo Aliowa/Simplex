@@ -39,11 +39,11 @@
 //Temeperature pins
 #define TEMP_PIN 25
 
-#include <I2CEEPROM.h>
+#include "I2CEEPROM.h"
 #include <OneWire.h>
 #include <Wire.h>
 #include <DallasTemperature.h>
-#include <LiquidCrystal_I2C.h>
+#include "LiquidCrystal_I2C.h"
 
 OneWire one_wire_pin(TEMP_PIN);
 DallasTemperature sensA(&one_wire_pin);
