@@ -63,7 +63,7 @@ const struct {
 } home_page[] = {
   {0, 0, "Mode:"},
   {14, 0, "kW"},
-  {0, 1, "Set t:"},
+  {0, 1, "Set:"},
   {10, 1, "t:"}
 };
 
@@ -83,9 +83,17 @@ struct LCDPosition {
   uint8_t row;
 };
 
+struct MinMax {
+  uint8_t min;
+  uint8_t max;
+};
+
 const struct LCDPosition current_temp = {12, 1};
-const struct LCDPosition set_temp = {6, 1};
+const struct LCDPosition set_temp = {4, 1};
 const struct LCDPosition kW = {11, 0};
+
+const struct MinMax zone[] = {{0, 63}, {64, 127}, {128, 191}, {192, 255}};
+const struct MinMax min_max_temp = {10, 85};
 
 //EEPROM map: 20 - Set temerature; 21 - Potentiometer zero point value; 22 - Potentiomter zero point value set
 struct {
@@ -97,23 +105,7 @@ struct {
   {22, 0}
 };
 
-const struct {
-  uint8_t min;
-  uint8_t max;
-} zone[] = {
-  {0, 63},
-  {64, 127},
-  {128, 191},
-  {192, 255}
-};
-
 #define FORCE_ZERO_POINT
-
-//Set temperature min ad max
-const struct {
-  uint8_t min = 10;
-  uint8_t max = 85;
-} min_max_temp;
 
 //Sensor reading related data
 uint64_t read_sensors_time;
