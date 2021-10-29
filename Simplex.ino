@@ -221,11 +221,11 @@ void rotate_motor(int direction, float dif_temp) {
   Serial.println(rotation_delay);
   if (direction) {
     MOTOR_CW  //rotate clockwise
-    delay(100);
+    delay(rotation_delay);
     MOTOR_STOP
   } else {
     MOTOR_CCW //rotate counter clockwise
-    delay(100);
+    delay(rotation_delay);
     MOTOR_STOP
   }
 }
