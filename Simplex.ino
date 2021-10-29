@@ -78,26 +78,14 @@ const struct {
   {0, 0, "Firmware:"}
 };
 
-//Home page kW calc
-struct {
-  const uint8_t colum = 11;
-  const uint8_t row = 0;
-  float kW = 0;
-} kW;
+struct LCDPosition {
+  uint8_t column;
+  uint8_t row;
+};
 
-//Home page current temp position and data
-struct {
-  const uint8_t column = 12;
-  const uint8_t row = 1;
-  float t = 0;
-} current_temp;
-
-//Home page set temperature position and data
-struct {
-  const uint8_t column = 6;
-  const uint8_t row = 1;
-  float t = 0;
-} set_temp;
+const struct LCDPosition current_temp = {12, 1};
+const struct LCDPosition set_temp = {6, 1};
+const struct LCDPosition kW = {11, 0};
 
 //EEPROM map: 20 - Set temerature; 21 - Potentiometer zero point value; 22 - Potentiomter zero point value set
 struct {
@@ -168,9 +156,8 @@ void setup() {
 
   //Read and print initial data
   read_sensors();
-  lcd_print(current_temp.column, current_temp.row, current_temp.t);
+  lcd_print(current_temp.column, current_temp.row, temp[0]);
   memmory_map[0].data = eep.read(memmory_map[0].addres);
-  set_temp.t = memmory_map[0].data;
   lcd_print(set_temp.column, set_temp.row, memmory_map[0].data);
 
 #ifdef FORCE_ZERO_POINT
@@ -179,16 +166,17 @@ void setup() {
 #endif
 }
 
-//Move button to interrupts
-
 void loop() {
   //Read sensors each {read_sensors_interval}
+  //TODO! If interruped by reading pins, will hang, remove IRQ before reading
+  //TODO! Move button to interrupts
   if (millis() - read_sensors_time > read_sensors_interval) {
     read_sensors();
-    lcd_print(current_temp.column, current_temp.row, current_temp.t);
+    lcd_print(current_temp.column, current_temp.row, temp[0]);
     read_sensors_time = millis();
     update_temp();
   }
+
 
   //Check if UP button is pressed
   if (digitalRead(BUTTON_UP))
@@ -215,11 +203,10 @@ void read_sensors() {
     sensors[i]->requestTemperatures();
     temp[i] = sensors[i]->getTempCByIndex(0);
   }
-  current_temp.t = temp[0];
 }
 
 void update_temp() {
-  float dif_temp = set_temp.t - current_temp.t;
+  float dif_temp = memmory_map[0].data - temp[0];
   if (abs(dif_temp) > 0.1) {
     if (dif_temp > 0)
       rotate_motor(1, dif_temp);  //update to 0 if roattion should be oposite
@@ -230,7 +217,7 @@ void update_temp() {
 
 void rotate_motor(int direction, float dif_temp) {
   uint16_t rotation_delay = abs(dif_temp) * 1000;
-  rotation_delay = constrain(rotation_delay, 100, 1000); // rotatio max and min time
+  rotation_delay = constrain(rotation_delay, 100, 2000); // rotation max and min time
   Serial.println(rotation_delay);
   if (direction) {
     MOTOR_CW  //rotate clockwise
@@ -243,12 +230,11 @@ void rotate_motor(int direction, float dif_temp) {
   }
 }
 
-
+//TODO! Move only ++ and --, rest do in loop
 void button_up() {
   memmory_map[0].data++;
   memmory_map[0].data = constrain(memmory_map[0].data, min_max_temp.min, min_max_temp.max);
   eep.write(memmory_map[0].addres, memmory_map[0].data);
-  set_temp.t = memmory_map[0].data;
   lcd_print(set_temp.column, set_temp.row, eep.read(memmory_map[0].addres));
   delay(200); //Kind of debounce
 }
@@ -257,7 +243,6 @@ void button_down() {
   memmory_map[0].data--;
   memmory_map[0].data = constrain(memmory_map[0].data, min_max_temp.min, min_max_temp.max);
   eep.write(memmory_map[0].addres, memmory_map[0].data);
-  set_temp.t = memmory_map[0].data;
   lcd_print(set_temp.column, set_temp.row, eep.read(memmory_map[0].addres));
   delay(200); //Kind of debounce
 }
