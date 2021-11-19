@@ -29,6 +29,7 @@
 //Potentiometer predefined pin
 #define POT_PIN 26
 
+
 //Motor pins
 #define MOTOR_PIN_A 32
 #define MOTOR_PIN_B 33
@@ -44,6 +45,8 @@
 #include <Wire.h>
 #include <DallasTemperature.h>
 #include "LiquidCrystal_I2C.h"
+
+#define READ_POT map(analogRead(POT_PIN), 0, 4095, 0, 359)
 
 OneWire one_wire_pin(TEMP_PIN);
 DallasTemperature sensA(&one_wire_pin);
@@ -92,7 +95,7 @@ const struct LCDPosition current_temp = {12, 1};
 const struct LCDPosition set_temp = {4, 1};
 const struct LCDPosition kW = {11, 0};
 
-const struct MinMax zone[] = {{0, 63}, {64, 127}, {128, 191}, {192, 255}};
+const struct MinMax zone[] = {{0, 89}, {90, 179}, {180, 269}, {270, 359}};
 const struct MinMax min_max_temp = {10, 85};
 
 //EEPROM map: 20 - Set temerature; 21 - Potentiometer zero point value; 22 - Potentiomter zero point value set
@@ -153,7 +156,12 @@ void setup() {
   lcd_print(set_temp.column, set_temp.row, memmory_map[0].data);
 
 #ifdef FORCE_ZERO_POINT
-  eep.write(memmory_map[1].addres, byte(map(analogRead(POT_PIN), 0, 4095, 0, 255)));
+  while (READ_POT != 180) {
+    MOTOR_CW
+    Serial.println(map(analogRead(POT_PIN), 0, 4095, 0, 360));
+  }
+  MOTOR_STOP
+  eep.write(memmory_map[1].addres, byte(READ_POT));
   eep.write(memmory_map[2].addres, 1);
 #endif
 }
@@ -201,13 +209,32 @@ void update_temp() {
   float dif_temp = memmory_map[0].data - temp[0];
   if (abs(dif_temp) > 0.1) {
     if (dif_temp > 0)
-      rotate_motor(1, dif_temp);  //update to 0 if roattion should be oposite
+      rotate_motor(1);  //update to 0 if roattion should be oposite
     else
-      rotate_motor(0, dif_temp);  //update to 1 if roattion should be oposite
+      rotate_motor(0);  //update to 1 if roattion should be oposite
   }
 }
 
-void rotate_motor(int direction, float dif_temp) {
+void rotate_motor(uint8_t direction) {
+  int prev_angle = READ_POT;
+  if (direction) {
+    while (READ_POT != prev_angle + 1) {
+      //Serial.println(READ_POT);
+      MOTOR_CW
+    }
+  }
+  else {
+    while (READ_POT != prev_angle - 1) {
+      //Serial.println(READ_POT);
+      MOTOR_CCW
+    }
+  }
+  MOTOR_STOP
+}
+
+
+//Uses time instead of angle, old implementation
+void rotate_motor_old(int direction, float dif_temp) {
   uint16_t rotation_delay = abs(dif_temp) * 1000;
   rotation_delay = constrain(rotation_delay, 100, 2000); // rotation max and min time
   Serial.println(rotation_delay);
