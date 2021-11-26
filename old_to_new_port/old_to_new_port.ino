@@ -9,11 +9,11 @@
 
 #define DEBUG_EEPROM
 
-#include <I2CEEPROM.h>
+#include "I2CEEPROM.h"
 #include <OneWire.h>
 #include <Wire.h>
 #include <DallasTemperature.h>
-#include <LiquidCrystal_I2C.h>
+#include "LiquidCrystal_I2C.h"
 
 LiquidCrystal_I2C lcd(0x20, 16, 2);//scl-A5, sda-A4 SDA & SCL are pins A4 and A5 I2C
 I2CEEPROM EEPROM(0x50);
