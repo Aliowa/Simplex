@@ -218,14 +218,14 @@ void update_temp() {
 void rotate_motor(uint8_t direction, uint8_t quadrant) {
   int prev_angle = READ_POT;
   if (direction) {
-    if (prev_angle + 1 == zone[quadrant].max) //"End switch"
+    if (prev_angle + 1 > zone[quadrant].max) //"End switch"
       return;
     MOTOR_CW
     while (READ_POT != prev_angle + 1)
       ;
   }
   else {
-    if (prev_angle - 1 == zone[quadrant].min)
+    if (prev_angle - 1 < zone[quadrant].min)
       return;
     MOTOR_CCW
     while (READ_POT != prev_angle - 1)
